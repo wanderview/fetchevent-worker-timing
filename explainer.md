@@ -2,27 +2,27 @@
 
 ## What’s All This Then
 
-This document proposes a new web platform API that allows a service worker script to record timing information associated with a particular FetchEvent.  This timing information then becomes available on the associated network request’s PerformanceResourceTiming object.
+This document proposes a new web platform API that allows a service worker script to record timing information associated with a particular `FetchEvent`.  This timing information then becomes available on the associated network request’s `PerformanceResourceTiming` object.
 
-When the browser navigates or loads a subresource for a page it may dispatch a FetchEvent to a service worker.  This allows the service worker script to dynamically determine how that navigation or subresource request is handled.  This provides the site the flexibility to dynamically handle poor network conditions or other situations.
+When the browser navigates or loads a subresource for a page it may dispatch a `FetchEvent` to a service worker.  This allows the service worker script to dynamically determine how that navigation or subresource request is handled.  This provides the site the flexibility to dynamically handle poor network conditions or other situations.
 
 This flexibility, however, can come at a cost.  Dispatching an event to a javascript thread while fetching a network request adds some overhead.  This overhead may vary based on browser and device characteristics.  In addition, the service worker script itself may inadvertently perform work that takes longer than expected to complete.  These delays can add up over the course of a page’s many resource requests.
 
-The platform already exposes the [`PerformanceResourceTiming`][0] interface to help sites quantify network performance.  Historically this interface has focused on resources loaded from the network or http cache.  The `workerStart` attribute was added to measure the time required to start the service worker thread.  Beyond that, however, there is currently no information about the time required to process the FetchEvent in the service worker.
+The platform already exposes the [`PerformanceResourceTiming`][0] interface to help sites quantify network performance.  Historically this interface has focused on resources loaded from the network or http cache.  The `workerStart` attribute was added to measure the time required to start the service worker thread.  Beyond that, however, there is currently no information about the time required to process the `FetchEvent` in the service worker.
 
 This leaves some large, complex sites in the unfortunate situation where they encounter some amount of regression in page load times with service workers enabled, but no clear way to diagnose the problem.
 
-The API proposed in the document will provide additional insight into FetchEvent processing time for each resource request.
+The API proposed in the document will provide additional insight into `FetchEvent` processing time for each resource request.
 
 ## Goals
 
-**Goal 1:** Help large, complex sites build high quality service worker scripts with efficient FetchEvent handles.
+**Goal 1:** Help large, complex sites build high quality service worker scripts with efficient `FetchEvent` handlers.
 
-**Goal 2:** Help sites provide better bug reports to browsers about FetchEvent performance problems in the platform.
+**Goal 2:** Help sites provide better bug reports to browsers about `FetchEvent` performance problems in the platform.
 
 ## Non-Goals
 
-Service workers support many different features in addition to the FetchEvent.  This proposal is focused solely on the FetchEvent.  Measuring the behavior of other features is explicitly a non-goal.
+Service workers support many different features in addition to the `FetchEvent`.  This proposal is focused solely on the `FetchEvent`.  Measuring the behavior of other features is explicitly a non-goal.
 
 ## Getting Started / Example Code
 
@@ -52,7 +52,7 @@ Consider an html document that contains an image element.  The page also runs a 
 </html>
 ```
 
-If this document is loaded while controlled by a service worker, then the browser will dispatch a FetchEvent on the service worker thread.
+If this document is loaded while controlled by a service worker, then the browser will dispatch a `FetchEvent` on the service worker thread.
 
 ```javascript
 // service worker script
@@ -73,7 +73,7 @@ self.addEventListener(fetchEvent => {
 });
 ```
 
-This service worker performs multiple actions for each FetchEvent.  First it determines a strategy for handling the event.  This is done asynchronously to represent potentially reading a manifest from IDB, etc.  Next the handler implements a cache-only, network-only, or fallback behavior depending on which strategy was chosen.
+This service worker performs multiple actions for each `FetchEvent`.  First it determines a strategy for handling the event.  This is done asynchronously to represent potentially reading a manifest from `IndexedDB`, etc.  Next the handler implements a cache-only, network-only, or fallback behavior depending on which strategy was chosen.
 
 With the proposed API the service worker script would be modified to mark the time at each step.  This is done using an API similar to the [User Timing API][3] exposed on the FetchEvent.
 
@@ -146,7 +146,7 @@ In addition, the site can observe the actual paths taken through the service wor
 
 The performance of the initial navigation request for a page is a critical component in the overall load time.  Any delays block further loading work and directly translate to the bottom line.  Therefore, it's important to be able to measure service worker impacts on navigation requests.
 
-The browser exposes navigation timing via the [`PerformanceNavigationTiming`][2] interface.  Since this interface extends PerformanceResourceTiming the proposed workerTiming attribute will be automatically exposed for navigations as well.
+The browser exposes navigation timing via the [`PerformanceNavigationTiming`][2] interface.  Since this interface extends `PerformanceResourceTiming` the proposed `workerTiming` attribute will be automatically exposed for navigations as well.
 
 The example code previously shown in this document should work for both subresource and navigation requests.
 
@@ -154,15 +154,15 @@ The example code previously shown in this document should work for both subresou
 
 While many sites only load each resource once, it is certainly possible to load the same URL multiple times.  For example, the site may be using a REST API that they need to invoke multiple times.  The performance of these requests should be tracked separately unambiguously.
 
-Since the FetchEvent.performanceMark() method directly populates a specific PerformanceResourceTiming object duplicate requests are easily distinguished.  The API for access PerformanceResourceTiming objects already supports duplicate requests in a standard way.
+Since the `FetchEvent.performanceMark()` method directly populates a specific PerformanceResourceTiming object duplicate requests are easily distinguished.  The API for access `PerformanceResourceTiming` objects already supports duplicate requests in a standard way.
 
 The example code previously shown in this document should work for sites that load the same URL multiple times.
 
 ### Scenario 3: Measuring a ReadableStream Body
 
-While service workers will often produce a Response using fetch() or caches.match(), they may also programmatically create a synthetic Response.  The service worker can even dynamically generate the body data by using a ReadableStream.  It should be possible measure this kind of ReadableStream body generation.
+While service workers will often produce a `Response` using `fetch()` or `caches.match()`, they may also programmatically create a synthetic `Response`.  The service worker can even dynamically generate the body data by using a `ReadableStream`.  It should be possible measure this kind of `ReadableStream` body generation.
 
-To support this scenario FetchEvent.performanceMark() can be called up until the responseEnd value is recorded for the request.
+To support this scenario `FetchEvent.performanceMark()` can be called up until the last `waitUntil()` or `respondWith()` promise is settled.
 
 A service worker implementing this case might look like this:
 
@@ -201,21 +201,21 @@ self.addEventListener(fetchEvent => {
 
 One of the primary safety mechanisms on the web is the same-origin policy (SOP).  This policy allows sites to load some cross-origin resources, but prevents script from inspecting the content of cross-origin resources.  Sites that want to allow their resources to be read cross-origin can opt-in to the behavior via CORS headers.
 
-Even if content is hidden from cross-origin script, it is still possible for a site to infer information based on the timing of the load.  Because of this some PerformanceResourceTiming information is blocked unless the resource is served with the Timing-Allow-Origin header.
+Even if content is hidden from cross-origin script, it is still possible for a site to infer information based on the timing of the load.  Because of this some `PerformanceResourceTiming` information is blocked unless the resource is served with the `Timing-Allow-Origin` header.
 
-In the case of FetchEvent Worker Timing the Timing-Allow-Origin header is not necessary.  Service workers are only allowed to control pages of the same origin.  FetchEvents may be dispatched for cross-origin subresources, but the service worker can only decorate the load with same-origin information.  The service worker does not have any additional access to cross-origin information.  Also, any information produced by the service worker can already be shared with the page via postMessage(), IDB, or other mechanisms.
+In the case of FetchEvent Worker Timing the `Timing-Allow-Origin` header is not necessary.  Service workers are only allowed to control pages of the same origin.  `FetchEvent` objects may be dispatched for cross-origin subresources, but the service worker can only decorate the load with same-origin information.  The service worker does not have any additional access to cross-origin information.  Also, any information produced by the service worker can already be shared with the page via `postMessage()`, `IndexedDB`, or other mechanisms.
 
-Because of the strict same-origin design of service workers we do not believe this feature needs to be guarded by Timing-Allow-Origin.
+Because of the strict same-origin design of service workers we do not believe this feature needs to be guarded by `Timing-Allow-Origin`.
 
 ### Issue 2: Late FetchEvent.performanceMark() Calls
 
-FetchEvent objects have a natural life cycle based on how the network request is satisfied.  For example, if the handler does not call respondWith() synchronously then the request is allowed to fall back to network.  Or the handler could pass a Response and the browser could read the body.  In both cases the FetchEvent essentially loses the ability to effect the request any more.
+FetchEvent objects have a natural life cycle based on how the network request is satisfied.  For example, if the handler does not call `respondWith()` synchronously then the request is allowed to fall back to network.  Or the handler could pass a `Response` and the browser could read the body.  In both cases the `FetchEvent` essentially loses the ability to effect the request any more.
 
-The FetchEvent, however, does provide a waitUntil() method which can be used to perform extended actions after the respondWith() promise has been resolved.  Since these actions are still associated with the FetchEvent we would like to make the performanceMark() API available during this extended time period.
+The `FetchEvent`, however, does provide a `waitUntil()` method which can be used to perform extended actions after the `respondWith()` promise has been resolved.  Since these actions are still associated with the `FetchEvent` we would like to make the `performanceMark()` API available during this extended time period.
 
-To support this we propose that performanceMark() function normally up until the last FetchEvent.waitUntil() promise is settled.  After that point calls will be ignored.
+To support this we propose that `performanceMark()` function normally up until the last `FetchEvent.waitUntil()` or `FetchEvent.respondWith()` promise is settled.  After that point calls will be ignored.
 
-In order to support reading these late values we also propose that the PerformanceObserver notification for intercepted requests be delayed until their last waitUntil() promise is settled.  If this is considered too breaking, this behavior could be made an opt-in feature.
+In order to support reading these late values we also propose that the `PerformanceObserver` notification for intercepted requests be delayed until their last `waitUntil()` promise is settled.  If this is considered too breaking, this behavior could be made an opt-in feature.
 
 ### Issue 3: Metadata Limits
 
@@ -227,7 +227,7 @@ Since the FetchEvent Worker Timing API is based on User Timing it would make sen
 
 ## Considered Alternatives
 
-### Alternative 0: Combining Results on the Server
+### Alternative 1: Combining Results on the Server
 
 The most basic alternative is to not try to connect service worker performance directly to resources on the client.  Instead, the page and service worker script could send results to a server-side reporting service to "stitch" the performance data back together.
 
@@ -235,25 +235,25 @@ While this is a valid approach, it is not always reasonable to implement.  In pa
 
 In addition, the only piece of common data between the FetchEvent in the service worker and the request is the URL.  This provides some ability to match records up, but its difficult to precisely say which FetchEvent was associated with which request.
 
-We have been moving more information into the client to help reduce the need for complex server data combination.  For example, the [Server Timing][4] specification now allows server-side performance data to be included in the PerformanceResourceTiming object in the browser.
+We have been moving more information into the client to help reduce the need for complex server data combination.  For example, the [Server Timing][4] specification now allows server-side performance data to be included in the `PerformanceResourceTiming` object in the browser.
 
 The goal is to give more sites accurate performance data for their entire stack.  The FetchEvent Worker Timing proposal builds on the Server Timing approach to further this goal.
 
-### Alternative 1: Client.postMessage()
+### Alternative 2: Client.postMessage()
 
-The main alternative to this proposal is the existing Client.postMessage() API.  The idea is that the service worker script would track timing information in its own data structures and then postMessage() the information to the page.  The page would then merge this information with the PerformanceResourceTiming data.
+The main alternative to this proposal is the existing `Client.postMessage()` API.  The idea is that the service worker script would track timing information in its own data structures and then `postMessage()` the information to the page.  The page would then merge this information with the `PerformanceResourceTiming` data.
 
 There are a couple issues with this approach.
 
-First, browsers currently do not expose a Client id for navigation requests.  So it's not possible to get a handle to the Client to call postMessage() for navigations.  Browsers are starting to implement FetchEvent.resultingClientId now, so this problem should be resolved in the future.
+First, browsers currently do not expose a Client id for navigation requests.  So it's not possible to get a handle to the Client to call `postMessage()` for navigations.  Browsers are starting to implement FetchEvent.resultingClientId now, so this problem should be resolved in the future.
 
 Second, it is difficult to track data for duplicate requests with this approach.  It may not be clear with PerformanceResourceTiming object corresponds to the MessageEvent data from the service worker.  This makes it difficult to build general purpose measurement systems.
 
 Third, this approach imposes additional costs on the site in order to measure other code.  Additional javascript must be loaded in both the service worker script and the main page.  It also requires running additional tasks on the main thread to receive the MessageEvent.  While these costs are not excessive, it would be nice to avoid them if possible.
 
-### Alternative 2: Timing Attributes Based on Response Source
+### Alternative 3: Timing Attributes Based on Response Source
 
-Another alternative would be to automatically record some timing information on the Response object based on its source.  For example, a Response produced from the Cache API might record when the database lookup started and ended.  These values could then be placed on the PerformanceResourceTiming object in specified attributes.
+Another alternative would be to automatically record some timing information on the `Response object` based on its source.  For example, a Response produced from the Cache API might record when the database lookup started and ended.  These values could then be placed on the `PerformanceResourceTiming` object in specified attributes.
 
 For example, this service worker:
 
@@ -270,9 +270,9 @@ let entry = performance.getEntriesByName(url)[0];
 let cacheElapsed = entry.cacheMatchEnd - entry.cacheMatchStart;
 ```
 
-The main downside of this alternative is that it only provides information about the particular Response that was passed to the FetchEvent.  If the service worker script does anything beyond a simple cache or pass-through operation then it will miss important information.
+The main downside of this alternative is that it only provides information about the particular `Response` that was passed to the `FetchEvent`.  If the service worker script does anything beyond a simple cache or pass-through operation then it will miss important information.
 
-For example, if a service worker implements a fallback strategy then this alternative will provide information about how long it took to fetch() the network Response.  It will completely ignore the time required to access the Cache API to determine the resource was not available locally.
+For example, if a service worker implements a fallback strategy then this alternative will provide information about how long it took to `fetch()` the network `Response`.  It will completely ignore the time required to access the Cache API to determine the resource was not available locally.
 
 Given that we need to help sites with large complex service worker scripts we chose to forego this alternative approach.
 
