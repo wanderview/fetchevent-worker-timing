@@ -2,9 +2,9 @@
 
 ## What’s All This Then
 
-This document proposes a new web platform API that allows a service worker script to record timing information associated with a particular `FetchEvent`.  This timing information then becomes available on the associated network request’s `PerformanceResourceTiming` object.
+This document proposes a new web platform API that allows a [service worker][ServiceWorker] script to record timing information associated with a particular [`FetchEvent`][FetchEvent].  This timing information then becomes available on the associated network request’s `PerformanceResourceTiming` object.
 
-When the browser navigates or loads a subresource for a page it may dispatch a `FetchEvent` to a service worker.  This allows the service worker script to dynamically determine how that navigation or subresource request is handled.  This provides the site the flexibility to dynamically handle poor network conditions or other situations.
+When the browser navigates or loads a subresource for a page it may [dispatch][HandleFetch] a `FetchEvent` to a service worker.  This allows the service worker script to dynamically determine how that navigation or subresource request is handled.  This provides the site the flexibility to dynamically handle poor network conditions or other situations.
 
 This flexibility, however, can come at a cost.  Dispatching an event to a javascript thread while fetching a network request adds some overhead.  This overhead may vary based on browser and device characteristics.  In addition, the service worker script itself may inadvertently perform work that takes longer than expected to complete.  These delays can add up over the course of a page’s many resource requests.
 
@@ -209,7 +209,7 @@ Because of the strict same-origin design of service workers we do not believe th
 
 ### Issue 2: Late FetchEvent.performanceMark() Calls
 
-FetchEvent objects have a natural life cycle based on how the network request is satisfied.  For example, if the handler does not call `respondWith()` synchronously then the request is allowed to fall back to network.  Or the handler could pass a `Response` and the browser could read the body.  In both cases the `FetchEvent` essentially loses the ability to effect the request any more.
+`FetchEvent` objects have a natural life cycle based on how the network request is satisfied.  For example, if the handler does not call `respondWith()` synchronously then the request is allowed to fall back to network.  Or the handler could pass a `Response` and the browser could read the body.  In both cases the `FetchEvent` essentially loses the ability to effect the request any more.
 
 The `FetchEvent`, however, does provide a `waitUntil()` method which can be used to perform extended actions after the `respondWith()` promise has been resolved.  Since these actions are still associated with the `FetchEvent` we would like to make the `performanceMark()` API available during this extended time period.
 
@@ -278,12 +278,16 @@ Given that we need to help sites with large complex service worker scripts we ch
 
 ## References & Acknowledgements
 
+*https://w3c.github.io/ServiceWorker/
 * https://w3c.github.io/resource-timing/#sec-performanceresourcetiming
 * https://w3c.github.io/user-timing/#extensions-performance-interface
 * https://w3c.github.io/navigation-timing/#sec-PerformanceNavigationTiming
 * https://docs.google.com/document/d/1hltt8z9C4PaI5Qu1YMIp1wOGdbJPJPoJwBarEeCY6xQ/edit?usp=sharing
 * https://w3c.github.io/server-timing/
 
+[ServiceWorker]:https://w3c.github.io/ServiceWorker/
+[FetchEvent]:https://w3c.github.io/ServiceWorker/#fetchevent
+[HandleFetch]:https://w3c.github.io/ServiceWorker/#on-fetch-request-algorithm
 [0]:https://w3c.github.io/resource-timing/#sec-performanceresourcetiming
 [1]:https://w3c.github.io/user-timing/#extensions-performance-interface
 [2]:https://w3c.github.io/navigation-timing/#sec-PerformanceNavigationTiming
