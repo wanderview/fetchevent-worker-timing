@@ -278,7 +278,7 @@ Given that we need to help sites with large complex service worker scripts we ch
 
 ## References & Acknowledgements
 
-*https://w3c.github.io/ServiceWorker/
+* https://w3c.github.io/ServiceWorker/
 * https://w3c.github.io/resource-timing/#sec-performanceresourcetiming
 * https://w3c.github.io/user-timing/#extensions-performance-interface
 * https://w3c.github.io/navigation-timing/#sec-PerformanceNavigationTiming
