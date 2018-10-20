@@ -285,6 +285,8 @@ Given that we need to help sites with large complex service worker scripts we ch
 * https://docs.google.com/document/d/1hltt8z9C4PaI5Qu1YMIp1wOGdbJPJPoJwBarEeCY6xQ/edit?usp=sharing
 * https://w3c.github.io/server-timing/
 
+Thank you to Ralph Chelala, Tim Dresser, Aaron Nelson, Dan Seminara, Jimmy Shen, Yoav Weiss, and Clay Woolam for reviewing earlier drafts of this proposal.
+
 [ServiceWorker]:https://w3c.github.io/ServiceWorker/
 [FetchEvent]:https://w3c.github.io/ServiceWorker/#fetchevent
 [HandleFetch]:https://w3c.github.io/ServiceWorker/#on-fetch-request-algorithm
