@@ -239,6 +239,14 @@ We could try to place restrictions on the size of names and the number of entrie
 
 Since the FetchEvent Worker Timing API is based on User Timing it would make sense to adopt this metadata API when it is implemented in User Timing.  Given this likely outcome it seems unnecessary to impose limits on the proposed API to block passing larger amounts of data.
 
+## Issue 4: Redirects
+
+Currently its possible to measure some information about redirected navigation and subresource loads via their resulting `PerformanceResourceTiming` entry.  This information is protected by the `Timing-Allow-Origin` check.  While this same restriction may not apply to the service worker, we still need to handle redirects cautiously.
+
+In the case of a subresource redirecting we can simply allow all `FetchEvent` related entries to be accumulated on the `PerformanceResourceTiming` object.  The subresource may trigger multiple `FetchEvent` dispatches, but they will always be sent to the same service worker.  Preserving the previous entries from this same service worker is not a problem.
+
+For a navigation, however, redirects may trigger `FetchEvent` dispatches on different service workers.  In addition, some of these may be on completely different origins.  At a minimum any previous `FetchEvent` worker timing entries must be cleared on a cross-origin navigation redirect.  To be conservative we could clear these entries on all navigation redirects to start.
+
 ## Considered Alternatives
 
 ### Alternative 1: Combining Results on the Server
