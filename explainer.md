@@ -265,7 +265,17 @@ Second, it is difficult to track data for duplicate requests with this approach.
 
 Third, this approach imposes additional costs on the site in order to measure other code.  Additional javascript must be loaded in both the service worker script and the main page.  It also requires running additional tasks on the main thread to receive the MessageEvent.  While these costs are not excessive, it would be nice to avoid them if possible.
 
-### Alternative 3: Timing Attributes Based on Response Source
+### Alternative 3: Service Worker Sets Server-Timing Headers
+
+The [Server Timing][4] spec allows servers to include a header that will then result in a value being exposed on the `PerformanceResourceTiming` object.  One alternative would be to require the service worker to craft these headers and attach them to the `Response`.
+
+The main problem with this is that it only allows the service worker to measure cases where there is a `Response` object.  Its possible for the service worker to not call `FetchEvent.respondWith()` at all and fallback to the browser's default network request.  In this case there is no `Response` object to add headers to.  Ideally any measurement API should support measuring this case as well.
+
+Also, the [Fetch API][Fetch] allows headers to be added to a `Response` object, but it does not make it very ergonomic.  Since the `Response` from a `fetch()` or `cache.match()` is immutable the service worker would have to create a new synthetic `Response` in order to add headers.  This in turn will lose some information, such as the response URL, from the original `Response`.
+
+Finally, it seems sub-optimal to require the service worker to serialize data to a header string just for the browser to turn around and parse it immediately.  Ideally a performance measurement mechanism should have as little overhead as possible.  Using headers to communicate from the service worker would add unnecessary overhead.
+
+### Alternative 4: Timing Attributes Based on Response Source
 
 Another alternative would be to automatically record some timing information on the `Response object` based on its source.  For example, a Response produced from the Cache API might record when the database lookup started and ended.  These values could then be placed on the `PerformanceResourceTiming` object in specified attributes.
 
@@ -298,6 +308,7 @@ Given that we need to help sites with large complex service worker scripts we ch
 * https://w3c.github.io/navigation-timing/#sec-PerformanceNavigationTiming
 * https://docs.google.com/document/d/1hltt8z9C4PaI5Qu1YMIp1wOGdbJPJPoJwBarEeCY6xQ/edit?usp=sharing
 * https://w3c.github.io/server-timing/
+* https://fetch.spec.whatwg.org/
 
 Thank you to Ralph Chelala, Tim Dresser, Aaron Nelson, Dan Seminara, Jimmy Shen, Yoav Weiss, and Clay Woolam for reviewing earlier drafts of this proposal.
 
@@ -309,3 +320,4 @@ Thank you to Ralph Chelala, Tim Dresser, Aaron Nelson, Dan Seminara, Jimmy Shen,
 [2]:https://w3c.github.io/navigation-timing/#sec-PerformanceNavigationTiming
 [3]:https://docs.google.com/document/d/1hltt8z9C4PaI5Qu1YMIp1wOGdbJPJPoJwBarEeCY6xQ/edit?usp=sharing
 [4]:https://w3c.github.io/server-timing/
+[Fetch]:https://fetch.spec.whatwg.org/
