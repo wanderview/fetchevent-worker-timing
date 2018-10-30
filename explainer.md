@@ -75,31 +75,45 @@ self.addEventListener(fetchEvent => {
 
 This service worker performs multiple actions for each `FetchEvent`.  First it determines a strategy for handling the event.  This is done asynchronously to represent potentially reading a manifest from `IndexedDB`, etc.  Next the handler implements a cache-only, network-only, or fallback behavior depending on which strategy was chosen.
 
-With the proposed API the service worker script would be modified to mark the time at each step.  This is done using an API similar to the [User Timing API][3] exposed on the FetchEvent.
+With the proposed API the service worker script would be modified to mark the time at each step.  This is done by first using the existing [User Timing API][3] to create `PerformanceEntry` objects and then using the new API to associate these entries with the `FetchEvent`.
 
 ```javascript
 // service worker script
 self.addEventListener(fetchEvent => {
   fetchEvent.respondWith(async _ => {
-    fetchEvent.performanceMark("strategyLookupStart");
+    fetchEvent.addPerformanceEntry(mark("strategyLookupStart"));
     let strategy = await getStrategy(fetchEvent.request.url);
-    fetchEvent.performanceMark("strategyLookupEnd");
+    fetchEvent.addPerformanceEntry(mark("strategyLookupEnd"));
 
     let response;
     if (strategy !== "network-only") {
-      fetchEvent.performanceMark("offlineCacheStart");**
+      fetchEvent.addPerformanceEntry(mark("offlineCacheStart"));
       response = await caches.match(fetchEvent.request);
-      fetchEvent.performanceMark("offlineCacheEnd");**
+      fetchEvent.addPerformanceEntry(mark("offlineCacheEnd"));
       if (response) {
         return response;
       } else if (strategy === "cache-only") {
         return new Response("error");
       }
     }
-    fetchEvent.performanceMark("networkFetchStart");**
+    fetchEvent.addPerformanceEntry(mark("networkFetchStart"));
     return fetch(fetchEvent.request);
   }());
 });
+
+// The performance entry could be generated in a few different ways.
+function mark(name) {
+  // User Timing Level 2
+  performance.mark(name);
+  let entries = performance.getEntriesByName(name);
+  return entries[entries.length - 1];
+  
+  // User Timing Level 3
+  // return performance.mark(name);
+  
+  // Or if we could use a constructor:
+  // return new PerformanceMark(name);
+}
 ```
 
 The page would then be able to easily read and report these values.
@@ -123,8 +137,8 @@ The page would then be able to easily read and report these values.
         responseEnd: entry.responseEnd,
       };
 
-      // Record the PerformanceEntry values created by using
-      // FetchEvent.performanceMark() in the service worker
+      // Record the PerformanceEntry values associated via
+      // FetchEvent.addPerformanceEntry() in the service worker.
       // script.
       for (let workerEntry in entry.workerTiming) {
         record[workerEntry.name] = workerEntry.startTime;
@@ -154,7 +168,7 @@ The example code previously shown in this document should work for both subresou
 
 While many sites only load each resource once, it is certainly possible to load the same URL multiple times.  For example, the site may be using a REST API that they need to invoke multiple times.  The performance of these requests should be tracked separately unambiguously.
 
-Since the `FetchEvent.performanceMark()` method directly populates a specific PerformanceResourceTiming object duplicate requests are easily distinguished.  The API for access `PerformanceResourceTiming` objects already supports duplicate requests in a standard way.
+Since the `FetchEvent.addPerformanceEntry()` method directly targets a specific PerformanceResourceTiming object duplicate requests are easily distinguished.  The API for access `PerformanceResourceTiming` objects already supports duplicate requests in a standard way.
 
 The example code previously shown in this document should work for sites that load the same URL multiple times.
 
@@ -162,7 +176,7 @@ The example code previously shown in this document should work for sites that lo
 
 While service workers will often produce a `Response` using `fetch()` or `caches.match()`, they may also programmatically create a synthetic `Response`.  The service worker can even dynamically generate the body data by using a `ReadableStream`.  It should be possible measure this kind of `ReadableStream` body generation.
 
-To support this scenario `FetchEvent.performanceMark()` can be called up until the last `waitUntil()` or `respondWith()` promise is settled.
+To support this scenario `FetchEvent.addPerformanceEntry()` can be called up until the last `waitUntil()` or `respondWith()` promise is settled.
 
 A service worker implementing this case might look like this:
 
@@ -177,15 +191,15 @@ self.addEventListener(fetchEvent => {
   let body = new ReadableStream({
     pull: async controller => {
       count += 1;
-      fetchEvent.performanceMark(`startComputeChunk-${count}`);
+      fetchEvent.addPerformanceEntry(mark(`startComputeChunk-${count}`));
       let chunk = await computeNextChunk();
-      fetchEvent.performanceMark(`endComputeChunk-${count}`);
+      fetchEvent.addPerformanceEntry(mark(`endComputeChunk-${count}`));
       if (chunk) {
         controller.enqueue(chunk);
       } else {
-        fetchEvent.performanceMark(`dynamicBodyComplete`);
+        fetchEvent.addPerformanceEntry(mark(`dynamicBodyComplete`));
         controller.close();
-        fetchEvent.performanceMark will start being ignored
+        // fetchEvent.addPerformanceEntry() will start being ignored
         // after the waitUntil() promise is resolved.
         endWaitUntil();
       }
@@ -207,13 +221,13 @@ In the case of FetchEvent Worker Timing the `Timing-Allow-Origin` header is not 
 
 Because of the strict same-origin design of service workers we do not believe this feature needs to be guarded by `Timing-Allow-Origin`.
 
-### Issue 2: Late FetchEvent.performanceMark() Calls
+### Issue 2: Late FetchEvent.addPerformanceEntry() Calls
 
 `FetchEvent` objects have a natural life cycle based on how the network request is satisfied.  For example, if the handler does not call `respondWith()` synchronously then the request is allowed to fall back to network.  Or the handler could pass a `Response` and the browser could read the body.  In both cases the `FetchEvent` essentially loses the ability to effect the request any more.
 
-The `FetchEvent`, however, does provide a `waitUntil()` method which can be used to perform extended actions after the `respondWith()` promise has been resolved.  Since these actions are still associated with the `FetchEvent` we would like to make the `performanceMark()` API available during this extended time period.
+The `FetchEvent`, however, does provide a `waitUntil()` method which can be used to perform extended actions after the `respondWith()` promise has been resolved.  Since these actions are still associated with the `FetchEvent` we would like to make the `addPerformanceEntry()` API available during this extended time period.
 
-To support this we propose that `performanceMark()` function normally up until the last `FetchEvent.waitUntil()` or `FetchEvent.respondWith()` promise is settled.  After that point calls will be ignored.
+To support this we propose that `addPerformanceEntry()` function normally up until the last `FetchEvent.waitUntil()` or `FetchEvent.respondWith()` promise is settled.  After that point calls will be ignored.
 
 In order to support reading these late values we also propose that the `PerformanceObserver` notification for intercepted requests be delayed until their last `waitUntil()` promise is settled.  If this is considered too breaking, this behavior could be made an opt-in feature.
 
