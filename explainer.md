@@ -247,6 +247,14 @@ In the case of a subresource redirecting we can simply allow all `FetchEvent` re
 
 For a navigation, however, redirects may trigger `FetchEvent` dispatches on different service workers.  In addition, some of these may be on completely different origins.  At a minimum any previous `FetchEvent` worker timing entries must be cleared on a cross-origin navigation redirect.  To be conservative we could clear these entries on all navigation redirects to start.
 
+## Issue 5: Privacy Considerations
+
+Another important issue to consider is whether this new API allows sites to collect more information about the user than they currently can.  Typically this concern is focused on the capabilities of "3rd party" sites in the form of cross-origin iframes to collect information.  Data collection can take the form of explicitly exposed information or information that can be passively inferred.  For example, two well known class of problems are information side channels due to precise timing and device fingerprinting.
+
+In this case we feel this API does not produce any additional privacy concerns.  As mentioned in the Timing-Allow-Origin section above, the FetchEvent Worker Timing is make it more convenient to access and organize information that is already available to the site.  It only allows the service worker to associate data with a FetchEvent, but does not expose additional information not already available.  While this data will often be timing related, those times are already available and the precision of the values will not be increased by this API.
+
+Therefore at this time we believe this API should not worsen privacy for the user.
+
 ## Considered Alternatives
 
 ### Alternative 1: Combining Results on the Server
