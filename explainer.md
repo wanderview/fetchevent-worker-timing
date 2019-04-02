@@ -32,7 +32,7 @@ Consider an html document that contains an image element.  The page also runs a 
 <!-- example document -->
 <html>
   <body>
-    <img src="foo.jpg”/>
+    <img src="foo.jpg"/>
   </body>
   <script>
     function onLoad() {
@@ -56,7 +56,7 @@ If this document is loaded while controlled by a service worker, then the browse
 
 ```javascript
 // service worker script
-self.addEventListener(fetchEvent => {
+self.addEventListener("fetch", fetchEvent => {
   fetchEvent.respondWith(async _ => {
     let strategy = await getStrategy(fetchEvent.request.url);
     let response;
@@ -79,7 +79,7 @@ With the proposed API the service worker script would be modified to mark the ti
 
 ```javascript
 // service worker script
-self.addEventListener(fetchEvent => {
+self.addEventListener("fetch", fetchEvent => {
   fetchEvent.respondWith(async _ => {
     fetchEvent.addPerformanceEntry(mark("strategyLookupStart"));
     let strategy = await getStrategy(fetchEvent.request.url);
@@ -122,7 +122,7 @@ The page would then be able to easily read and report these values.
 <!-- example document -->
 <html>
   <body>
-    <img src="foo.jpg”/>
+    <img src="foo.jpg"/>
   </body>
   <script>
     function onLoad() {
