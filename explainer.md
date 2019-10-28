@@ -81,39 +81,25 @@ With the proposed API the service worker script would be modified to mark the ti
 // service worker script
 self.addEventListener("fetch", fetchEvent => {
   fetchEvent.respondWith(async _ => {
-    fetchEvent.addPerformanceEntry(mark("strategyLookupStart"));
+    fetchEvent.addPerformanceEntry(performance.mark("strategyLookupStart"));
     let strategy = await getStrategy(fetchEvent.request.url);
-    fetchEvent.addPerformanceEntry(mark("strategyLookupEnd"));
+    fetchEvent.addPerformanceEntry(performance.mark("strategyLookupEnd"));
 
     let response;
     if (strategy !== "network-only") {
-      fetchEvent.addPerformanceEntry(mark("offlineCacheStart"));
+      fetchEvent.addPerformanceEntry(performance.mark("offlineCacheStart"));
       response = await caches.match(fetchEvent.request);
-      fetchEvent.addPerformanceEntry(mark("offlineCacheEnd"));
+      fetchEvent.addPerformanceEntry(performance.mark("offlineCacheEnd"));
       if (response) {
         return response;
       } else if (strategy === "cache-only") {
         return new Response("error");
       }
     }
-    fetchEvent.addPerformanceEntry(mark("networkFetchStart"));
+    fetchEvent.addPerformanceEntry(performance.mark("networkFetchStart"));
     return fetch(fetchEvent.request);
   }());
 });
-
-// The performance entry could be generated in a few different ways.
-function mark(name) {
-  // User Timing Level 2
-  performance.mark(name);
-  let entries = performance.getEntriesByName(name);
-  return entries[entries.length - 1];
-  
-  // User Timing Level 3
-  // return performance.mark(name);
-  
-  // Or if we could use a constructor:
-  // return new PerformanceMark(name);
-}
 ```
 
 The page would then be able to easily read and report these values.
@@ -191,13 +177,13 @@ self.addEventListener(fetchEvent => {
   let body = new ReadableStream({
     pull: async controller => {
       count += 1;
-      fetchEvent.addPerformanceEntry(mark(`startComputeChunk-${count}`));
+      fetchEvent.addPerformanceEntry(performance.mark(`startComputeChunk-${count}`));
       let chunk = await computeNextChunk();
-      fetchEvent.addPerformanceEntry(mark(`endComputeChunk-${count}`));
+      fetchEvent.addPerformanceEntry(performance.mark(`endComputeChunk-${count}`));
       if (chunk) {
         controller.enqueue(chunk);
       } else {
-        fetchEvent.addPerformanceEntry(mark(`dynamicBodyComplete`));
+        fetchEvent.addPerformanceEntry(performance.mark(`dynamicBodyComplete`));
         controller.close();
         // fetchEvent.addPerformanceEntry() will start being ignored
         // after the waitUntil() promise is resolved.
