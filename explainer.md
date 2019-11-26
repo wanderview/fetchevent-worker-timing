@@ -69,7 +69,7 @@ self.addEventListener("fetch", fetchEvent => {
       }
     }
     return fetch(fetchEvent.request);
-  }());
+  });
 });
 ```
 
@@ -98,7 +98,7 @@ self.addEventListener("fetch", fetchEvent => {
     }
     fetchEvent.addPerformanceEntry(performance.mark("networkFetchStart"));
     return fetch(fetchEvent.request);
-  }());
+  });
 });
 ```
 
@@ -168,7 +168,7 @@ A service worker implementing this case might look like this:
 
 ```javascript
 // service worker script
-self.addEventListener(fetchEvent => {
+self.addEventListener("fetch", fetchEvent => {
   let endWaitUntil;
   fetchEvent.waitUntil(
     new Promise(resolve => endWaitUntil = resolve));
