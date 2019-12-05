@@ -57,7 +57,7 @@ If this document is loaded while controlled by a service worker, then the browse
 ```javascript
 // service worker script
 self.addEventListener("fetch", fetchEvent => {
-  fetchEvent.respondWith(async _ => {
+  fetchEvent.respondWith((async _ => {
     let strategy = await getStrategy(fetchEvent.request.url);
     let response;
     if (strategy !== "network-only") {
@@ -69,7 +69,7 @@ self.addEventListener("fetch", fetchEvent => {
       }
     }
     return fetch(fetchEvent.request);
-  });
+  })());
 });
 ```
 
@@ -80,7 +80,7 @@ With the proposed API the service worker script would be modified to mark the ti
 ```javascript
 // service worker script
 self.addEventListener("fetch", fetchEvent => {
-  fetchEvent.respondWith(async _ => {
+  fetchEvent.respondWith((async _ => {
     fetchEvent.addPerformanceEntry(performance.mark("strategyLookupStart"));
     let strategy = await getStrategy(fetchEvent.request.url);
     fetchEvent.addPerformanceEntry(performance.mark("strategyLookupEnd"));
@@ -98,7 +98,7 @@ self.addEventListener("fetch", fetchEvent => {
     }
     fetchEvent.addPerformanceEntry(performance.mark("networkFetchStart"));
     return fetch(fetchEvent.request);
-  });
+  })());
 });
 ```
 
